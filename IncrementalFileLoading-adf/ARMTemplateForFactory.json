@@ -1,0 +1,301 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name",
+			"defaultValue": "IncrementalFileLoading-adf"
+		},
+		"LS_AzureDataLakeStorage_accountKey": {
+			"type": "secureString",
+			"metadata": "Secure string for 'accountKey' of 'LS_AzureDataLakeStorage'"
+		},
+		"ls_AzureDataLakeStorage2_accountKey": {
+			"type": "secureString",
+			"metadata": "Secure string for 'accountKey' of 'ls_AzureDataLakeStorage2'"
+		},
+		"sinkLS_accountKey": {
+			"type": "secureString",
+			"metadata": "Secure string for 'accountKey' of 'sinkLS'"
+		},
+		"sourceLS_accountKey": {
+			"type": "secureString",
+			"metadata": "Secure string for 'accountKey' of 'sourceLS'"
+		},
+		"LS_AzureDataLakeStorage_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://increfileloadingacc.dfs.core.windows.net/"
+		},
+		"ls_AzureDataLakeStorage2_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://increfileloadingacc.dfs.core.windows.net/"
+		},
+		"sinkLS_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://increfileloadingacc.dfs.core.windows.net/"
+		},
+		"sourceLS_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://increfileloadingacc.dfs.core.windows.net/"
+		},
+		"Trigger_ntm_properties_pipeline_parameters_windowStart": {
+			"type": "string",
+			"defaultValue": "@trigger().outputs.windowStartTime"
+		},
+		"Trigger_ntm_properties_pipeline_parameters_windowEnd": {
+			"type": "string",
+			"defaultValue": "@trigger().outputs.windowEndTime"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/Incremental load')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Copy_ntm",
+						"type": "Copy",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [
+							{
+								"name": "Source",
+								"value": "inputdata/raw/"
+							},
+							{
+								"name": "Destination",
+								"value": "inputdata/processesd/"
+							}
+						],
+						"typeProperties": {
+							"source": {
+								"type": "BinarySource",
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"modifiedDatetimeStart": {
+										"value": "@pipeline().parameters.windowStart",
+										"type": "Expression"
+									},
+									"modifiedDatetimeEnd": {
+										"value": "@pipeline().parameters.windowEnd",
+										"type": "Expression"
+									},
+									"wildcardFileName": "*"
+								},
+								"formatSettings": {
+									"type": "BinaryReadSettings"
+								}
+							},
+							"sink": {
+								"type": "BinarySink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings",
+									"copyBehavior": "PreserveHierarchy"
+								}
+							},
+							"enableStaging": false,
+							"enableSkipIncompatibleRow": false,
+							"skipErrorFile": {
+								"fileMissing": true,
+								"dataInconsistency": false
+							},
+							"validateDataConsistency": true
+						},
+						"inputs": [
+							{
+								"referenceName": "SourceDataset_ntm",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "DestinationDataset_ntm",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						]
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"parameters": {
+					"windowStart": {
+						"type": "String"
+					},
+					"windowEnd": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"lastPublishTime": "2023-12-06T20:52:26Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/SourceDataset_ntm')]",
+				"[concat(variables('factoryId'), '/datasets/DestinationDataset_ntm')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/DestinationDataset_ntm')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "sinkLS",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "Binary",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "processesd",
+						"fileSystem": "inputdata"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/sinkLS')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/SourceDataset_ntm')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "sourceLS",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "Binary",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "raw",
+						"fileSystem": "inputdata"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/sourceLS')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/LS_AzureDataLakeStorage')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('LS_AzureDataLakeStorage_properties_typeProperties_url')]",
+					"accountKey": {
+						"type": "SecureString",
+						"value": "[parameters('LS_AzureDataLakeStorage_accountKey')]"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ls_AzureDataLakeStorage2')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('ls_AzureDataLakeStorage2_properties_typeProperties_url')]",
+					"accountKey": {
+						"type": "SecureString",
+						"value": "[parameters('ls_AzureDataLakeStorage2_accountKey')]"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/sinkLS')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('sinkLS_properties_typeProperties_url')]",
+					"accountKey": {
+						"type": "SecureString",
+						"value": "[parameters('sinkLS_accountKey')]"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/sourceLS')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('sourceLS_properties_typeProperties_url')]",
+					"accountKey": {
+						"type": "SecureString",
+						"value": "[parameters('sourceLS_accountKey')]"
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/Trigger_ntm')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Started",
+				"pipeline": {
+					"pipelineReference": {
+						"referenceName": "Incremental load",
+						"type": "PipelineReference"
+					},
+					"parameters": {
+						"windowStart": "[parameters('Trigger_ntm_properties_pipeline_parameters_windowStart')]",
+						"windowEnd": "[parameters('Trigger_ntm_properties_pipeline_parameters_windowEnd')]"
+					}
+				},
+				"type": "TumblingWindowTrigger",
+				"typeProperties": {
+					"frequency": "Minute",
+					"interval": 15,
+					"startTime": "2023-12-06T19:32:00Z",
+					"delay": "00:00:00",
+					"maxConcurrency": 50,
+					"retryPolicy": {
+						"intervalInSeconds": 30
+					},
+					"dependsOn": []
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/pipelines/Incremental load')]"
+			]
+		}
+	]
+}
