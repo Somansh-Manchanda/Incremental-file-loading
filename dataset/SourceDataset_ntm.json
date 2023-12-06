@@ -1,0 +1,19 @@
+{
+	"name": "SourceDataset_ntm",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "sourceLS",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"folderPath": "raw",
+				"fileSystem": "inputdata"
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

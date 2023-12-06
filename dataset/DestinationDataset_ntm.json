@@ -1,0 +1,19 @@
+{
+	"name": "DestinationDataset_ntm",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "sinkLS",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"folderPath": "processesd",
+				"fileSystem": "inputdata"
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

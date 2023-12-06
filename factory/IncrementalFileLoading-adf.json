@@ -1,0 +1,9 @@
+{
+	"name": "IncrementalFileLoading-adf",
+	"location": "eastus",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "2f0ca058-1d72-4631-b23b-3d0848b7ca3d",
+		"tenantId": "ae793036-0f50-4956-8878-2a2b9d75a98b"
+	}
+}
